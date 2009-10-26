@@ -176,6 +176,14 @@ class VectorClock {
       vc[i] = 0;
     }
   }
+
+  public void maximumUpdate(VectorClock rhs) {
+    for (int i = 0; i < MAX_THREADS; ++i) {
+      if (rhs.vc[i] > this.vc[i]) {
+        this.vc[i] = rhs.vc[i];
+      }
+    }
+  }
 }
 
 class VectorClockTracker {
@@ -183,11 +191,20 @@ class VectorClockTracker {
 
   VectorClockTracker() {
     vectorClocks = new VectorClock[VectorClock.MAX_THREADS];
+    for (int i = 0; i < VectorClock.MAX_THREADS; ++i) {
+      vectorClocks[i] = new VectorClock();
+    }
   }
-  public void startBefore(Integer parent, Integer child) { }
+
+  public void startBefore(Integer parent, Integer child) {
+    vectorClocks[child].maximumUpdate(vectorClocks[parent]);
+  }
+  public void joinAfter(Integer parent, Integer child) {
+    vectorClocks[parent].maximumUpdate(vectorClocks[child]);
+  }
+
   public void waitAfter(Integer thread, Integer lock) { }
   public void notifyBefore(Integer thread, Integer lock) { }
-  public void joinAfter(Integer parent, Integer child) { }
 
   public VectorClock getVectorClock(Integer thread) {
     return vectorClocks[thread];

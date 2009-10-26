@@ -4,6 +4,10 @@ import javato.activetesting.activechecker.ActiveChecker;
 import javato.activetesting.analysis.AnalysisImpl;
 import javato.activetesting.common.Parameters;
 
+import javato.activetesting.lockset.LockSet;
+import javato.activetesting.lockset.LockSetTracker;
+import javato.activetesting.reentrant.IgnoreRentrantLock;
+
 /**
  * Copyright (c) 2007-2008,
  * Koushik Sen    <ksen@cs.berkeley.edu>
@@ -39,19 +43,19 @@ import javato.activetesting.common.Parameters;
 public class HybridAnalysis extends AnalysisImpl {
 //    need to declare data structures
 //    In my implementation I had the following datastructure
-//    private VectorClockTracker vcTracker;
-//    private LockSet lsTracker;
-//    private IgnoreRentrantLock ignoreRentrantLock;
-//    private HybridRaceTracker eb;
+    private VectorClockTracker vcTracker;
+    private LockSetTracker lsTracker;
+    private IgnoreRentrantLock ignoreRentrantLock;
+    private HybridRaceTracker eb;
 
     public void initialize() {
         synchronized (ActiveChecker.lock) {
 //    Your code goes here.
 //    In my implementation I had the following code:
-//            vcTracker = new VectorClockTracker();
-//            lsTracker = new LockSet();
-//            ignoreRentrantLock = new IgnoreRentrantLock();
-//            eb = new HybridRaceTracker();
+            vcTracker = new VectorClockTracker();
+            lsTracker = new LockSetTracker();
+            ignoreRentrantLock = new IgnoreRentrantLock();
+            eb = new HybridRaceTracker();
         }
     }
 
@@ -59,9 +63,9 @@ public class HybridAnalysis extends AnalysisImpl {
         synchronized (ActiveChecker.lock) {
 //    Your code goes here.
 //    In my implementation I had the following code:
-//            if (ignoreRentrantLock.lockBefore(thread, lock)) {
-//                boolean isDeadlock = lsTracker.lockBefore(iid, thread, lock);
-//            }
+            if (ignoreRentrantLock.lockBefore(thread, lock)) {
+                boolean isDeadlock = lsTracker.lockBefore(iid, thread, lock);
+            }
         }
     }
 
@@ -69,9 +73,9 @@ public class HybridAnalysis extends AnalysisImpl {
         synchronized (ActiveChecker.lock) {
 //    Your code goes here.
 //    In my implementation I had the following code:
-//            if (ignoreRentrantLock.unlockAfter(thread, lock)) {
-//                lsTracker.unlockAfter(thread);
-//            }
+            if (ignoreRentrantLock.unlockAfter(thread, lock)) {
+                lsTracker.unlockAfter(thread);
+            }
         }
     }
 
@@ -91,7 +95,7 @@ public class HybridAnalysis extends AnalysisImpl {
         synchronized (ActiveChecker.lock) {
 //    Your code goes here.
 //    In my implementation I had the following code:
-//            vcTracker.startBefore(parent, child);
+            vcTracker.startBefore(parent, child);
         }
     }
 
@@ -99,7 +103,7 @@ public class HybridAnalysis extends AnalysisImpl {
         synchronized (ActiveChecker.lock) {
 //    Your code goes here.
 //    In my implementation I had the following code:
-//            vcTracker.waitAfter(thread, lock);
+            vcTracker.waitAfter(thread, lock);
         }
     }
 
@@ -107,7 +111,7 @@ public class HybridAnalysis extends AnalysisImpl {
         synchronized (ActiveChecker.lock) {
 //    Your code goes here.
 //    In my implementation I had the following code:
-//            vcTracker.notifyBefore(thread, lock);
+            vcTracker.notifyBefore(thread, lock);
         }
     }
 
@@ -115,7 +119,7 @@ public class HybridAnalysis extends AnalysisImpl {
         synchronized (ActiveChecker.lock) {
 //    Your code goes here.
 //    In my implementation I had the following code:
-//            vcTracker.notifyBefore(thread, lock);
+            vcTracker.notifyBefore(thread, lock);
         }
     }
 
@@ -123,7 +127,7 @@ public class HybridAnalysis extends AnalysisImpl {
         synchronized (ActiveChecker.lock) {
 //    Your code goes here.
 //    In my implementation I had the following code:
-//            vcTracker.joinAfter(parent, child);
+            vcTracker.joinAfter(parent, child);
         }
     }
 
@@ -131,9 +135,9 @@ public class HybridAnalysis extends AnalysisImpl {
         synchronized (ActiveChecker.lock) {
 //    Your code goes here.
 //    In my implementation I had the following code:
-//            LockSet ls = lsTracker.getLockSet(thread);
-//            eb.checkRace(iid, thread, memory, true, vcTracker.getVectorClock(thread), ls);
-//            eb.addEvent(iid, thread, memory, true, vcTracker.getVectorClock(thread), ls);
+            LockSet ls = lsTracker.getLockSet(thread);
+            eb.checkRace(iid, thread, memory, true, vcTracker.getVectorClock(thread), ls);
+            eb.addEvent(iid, thread, memory, true, vcTracker.getVectorClock(thread), ls);
         }
     }
 
@@ -141,9 +145,9 @@ public class HybridAnalysis extends AnalysisImpl {
         synchronized (ActiveChecker.lock) {
 //    Your code goes here.
 //    In my implementation I had the following code:
-//            LockSet ls = lsTracker.getLockSet(thread);
-//            eb.checkRace(iid, thread, memory, false, vcTracker.getVectorClock(thread), ls);
-//            eb.addEvent(iid, thread, memory, false, vcTracker.getVectorClock(thread), ls);
+            LockSet ls = lsTracker.getLockSet(thread);
+            eb.checkRace(iid, thread, memory, false, vcTracker.getVectorClock(thread), ls);
+            eb.addEvent(iid, thread, memory, false, vcTracker.getVectorClock(thread), ls);
         }
     }
 
@@ -152,11 +156,44 @@ public class HybridAnalysis extends AnalysisImpl {
             int nRaces=0; // nRaces must be equal to the number races detected by the hybrid race detector
 //    Your code goes here.
 //    In my implementation I had the following code:
-//            nRaces = eb.dumpRaces();
+            nRaces = eb.dumpRaces();
 //    The following method call creates a file "error.list" containing the list of numbers "1,2,3,...,nRaces"
 //    This file is used by run.xml to initialize Parameters.errorId with a number from from the list.
 //    Parameters.errorId tells RaceFuzzer the id of the race that RaceFuzzer should try to create
             Parameters.writeIntegerList(Parameters.ERROR_LIST_FILE, nRaces);
         }
     }
+}
+
+class VectorClockTracker {
+  VectorClockTracker() { }
+  public void startBefore(Integer parent, Integer child) { }
+  public void waitAfter(Integer thread, Integer lock) { }
+  public void notifyBefore(Integer thread, Integer lock) { }
+  public void joinAfter(Integer parent, Integer child) { }
+
+  public Integer getVectorClock(Integer thread) {
+    return new Integer(0);
+//            eb.checkRace(iid, thread, memory, false, vcTracker.getVectorClock(thread), ls);
+  }
+
+}
+
+class HybridRaceTracker {
+  HybridRaceTracker() { }
+
+  public void checkRace(Integer iid, Integer thread, Long memory, boolean isRead, Integer vClock, LockSet ls) { }
+//            eb.checkRace(iid, thread, memory, false, vcTracker.getVectorClock(thread), ls);
+
+  public void addEvent(Integer iid, Integer thread, Long memory, boolean isRead, Integer vClock, LockSet ls) { }
+//            eb.addEvent(iid, thread, memory, false, vcTracker.getVectorClock(thread), ls);
+
+//    The following method call creates a file "error.list" containing the list of numbers "1,2,3,...,nRaces"
+//    This file is used by run.xml to initialize Parameters.errorId with a number from from the list.
+//    Parameters.errorId tells RaceFuzzer the id of the race that RaceFuzzer should try to create
+  public int dumpRaces() {
+    return 0;
+//            nRaces = eb.dumpRaces();
+  }
+
 }

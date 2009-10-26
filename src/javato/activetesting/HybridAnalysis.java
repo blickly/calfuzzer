@@ -141,8 +141,8 @@ public class HybridAnalysis extends AnalysisImpl {
 //    Your code goes here.
 //    In my implementation I had the following code:
             LockSet ls = lsTracker.getLockSet(thread);
-            eb.checkRace(iid, thread, memory, true, vcTracker.getVectorClock(thread), ls);
-            eb.addEvent(iid, thread, memory, true, vcTracker.getVectorClock(thread), ls);
+            eb.checkRace(iid, thread, memory, false, vcTracker.getVectorClock(thread), ls);
+            eb.addEvent(iid, thread, memory, false, vcTracker.getVectorClock(thread), ls);
         }
     }
 
@@ -151,8 +151,8 @@ public class HybridAnalysis extends AnalysisImpl {
 //    Your code goes here.
 //    In my implementation I had the following code:
             LockSet ls = lsTracker.getLockSet(thread);
-            eb.checkRace(iid, thread, memory, false, vcTracker.getVectorClock(thread), ls);
-            eb.addEvent(iid, thread, memory, false, vcTracker.getVectorClock(thread), ls);
+            eb.checkRace(iid, thread, memory, true, vcTracker.getVectorClock(thread), ls);
+            eb.addEvent(iid, thread, memory, true, vcTracker.getVectorClock(thread), ls);
         }
     }
 

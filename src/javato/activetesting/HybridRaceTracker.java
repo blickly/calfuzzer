@@ -29,22 +29,22 @@ class Event {
   public Integer iid;
   public Integer thread;
   public Long memory;
-  public boolean isRead;
+  public boolean isWrite;
   public VectorClock vClock;
   public LockSet ls;
 
-  Event(Integer iid, Integer thread, Long memory, boolean isRead, VectorClock vClock, LockSet ls) {
+  Event(Integer iid, Integer thread, Long memory, boolean isWrite, VectorClock vClock, LockSet ls) {
     this.iid = iid;
     this.thread = thread;
     this.memory = memory;
-    this.isRead = isRead;
+    this.isWrite = isWrite;
     this.vClock = vClock;
     this.ls = ls;
   }
 
   boolean isRace(Event rhs) {
     return this.thread != rhs.thread && this.memory == rhs.memory
-      && !(this.isRead && rhs.isRead) && !this.vClock.lessThanEqual(rhs.vClock)
+      && (this.isWrite || rhs.isWrite) && !this.vClock.lessThanEqual(rhs.vClock)
       && !rhs.vClock.lessThanEqual(this.vClock) && !this.ls.intersects(rhs.ls);
   }
 }
@@ -54,8 +54,8 @@ class HybridRaceTracker {
   private LinkedHashSet<CommutativePair> races = new LinkedHashSet<CommutativePair>();
   HybridRaceTracker() { }
 
-  public void checkRace(Integer iid, Integer thread, Long memory, boolean isRead, VectorClock vClock, LockSet ls) {
-    Event thisEvent = new Event(iid, thread, memory, isRead, vClock, ls);
+  public void checkRace(Integer iid, Integer thread, Long memory, boolean isWrite, VectorClock vClock, LockSet ls) {
+    Event thisEvent = new Event(iid, thread, memory, isWrite, vClock, ls);
     LinkedList<Event> eventStack = eventsAtMem.get(memory);
     if (eventStack == null) {
       eventStack = new LinkedList<Event>();
@@ -68,8 +68,8 @@ class HybridRaceTracker {
     }
   }
 
-  public void addEvent(Integer iid, Integer thread, Long memory, boolean isRead, VectorClock vClock, LockSet ls) {
-    Event e = new Event(iid, thread, memory, isRead, vClock, ls);
+  public void addEvent(Integer iid, Integer thread, Long memory, boolean isWrite, VectorClock vClock, LockSet ls) {
+    Event e = new Event(iid, thread, memory, isWrite, vClock, ls);
     LinkedList<Event> eventStack = eventsAtMem.get(memory);
     if (eventStack == null) {
       eventStack = new LinkedList<Event>();

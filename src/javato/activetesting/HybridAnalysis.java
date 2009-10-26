@@ -7,8 +7,11 @@ import javato.activetesting.common.Parameters;
 import javato.activetesting.lockset.LockSet;
 import javato.activetesting.lockset.LockSetTracker;
 import javato.activetesting.reentrant.IgnoreRentrantLock;
+import javato.activetesting.HybridRaceTracker;
 
+import java.util.Map;
 import java.util.HashMap;
+import java.util.TreeMap;
 
 /**
  * Copyright (c) 2007-2008,
@@ -168,7 +171,7 @@ public class HybridAnalysis extends AnalysisImpl {
 }
 
 class VectorClock {
-  public static final int MAX_THREADS = 10;
+  public static final int MAX_THREADS = 155;
   public Integer[] vc;
   VectorClock() {
     vc = new Integer[MAX_THREADS];
@@ -184,13 +187,22 @@ class VectorClock {
       }
     }
   }
+
+  public boolean lessThanEqual(VectorClock rhs) {
+    for (int i = 0; i < MAX_THREADS; ++i) {
+      if (this.vc[i] > rhs.vc[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
 }
 
 class VectorClockTracker {
-  private VectorClock[] vectorClocks;
+  private VectorClock[] vectorClocks = new VectorClock[VectorClock.MAX_THREADS];
+  private Map<Integer, VectorClock> lockClocks = new HashMap<Integer, VectorClock>();
 
   VectorClockTracker() {
-    vectorClocks = new VectorClock[VectorClock.MAX_THREADS];
     for (int i = 0; i < VectorClock.MAX_THREADS; ++i) {
       vectorClocks[i] = new VectorClock();
     }
@@ -203,8 +215,21 @@ class VectorClockTracker {
     vectorClocks[parent].maximumUpdate(vectorClocks[child]);
   }
 
-  public void waitAfter(Integer thread, Integer lock) { }
-  public void notifyBefore(Integer thread, Integer lock) { }
+  public void notifyBefore(Integer thread, Integer lock) {
+    VectorClock lc = lockClocks.get(lock);
+    if (lc != null) {
+      vectorClocks[thread].maximumUpdate(lc);
+    }
+  }
+  public void waitAfter(Integer thread, Integer lock) {
+    VectorClock lc = lockClocks.get(lock);
+    if (lc != null) {
+      lc.maximumUpdate(vectorClocks[thread]);
+    } else {
+      lc = vectorClocks[thread];
+    }
+    lockClocks.put(lock, lc);
+  }
 
   public VectorClock getVectorClock(Integer thread) {
     return vectorClocks[thread];
@@ -212,21 +237,4 @@ class VectorClockTracker {
 
 }
 
-class HybridRaceTracker {
-  HybridRaceTracker() { }
 
-  public void checkRace(Integer iid, Integer thread, Long memory, boolean isRead, VectorClock vClock, LockSet ls) { }
-//            eb.checkRace(iid, thread, memory, false, vcTracker.getVectorClock(thread), ls);
-
-  public void addEvent(Integer iid, Integer thread, Long memory, boolean isRead, VectorClock vClock, LockSet ls) { }
-//            eb.addEvent(iid, thread, memory, false, vcTracker.getVectorClock(thread), ls);
-
-//    The following method call creates a file "error.list" containing the list of numbers "1,2,3,...,nRaces"
-//    This file is used by run.xml to initialize Parameters.errorId with a number from from the list.
-//    Parameters.errorId tells RaceFuzzer the id of the race that RaceFuzzer should try to create
-  public int dumpRaces() {
-    return 0;
-//            nRaces = eb.dumpRaces();
-  }
-
-}

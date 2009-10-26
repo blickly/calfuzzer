@@ -1,0 +1,782 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="javato" default="usage">
+    <taskdef resource="net/sf/antcontrib/antlib.xml">
+        <classpath>
+            <pathelement location="lib/ant-contrib.jar"/>
+        </classpath>
+    </taskdef>
+    <property name="javato.home.dir" location="."/>
+    <property name="benchdir" location="src/benchmarks"/>
+
+    <target name="clean">
+        <!--
+              Required poperties:
+                  javato.work.dir
+          -->
+        <fail unless="javato.work.dir"/>
+        <delete dir="${javato.work.dir}/tmpclasses"/>
+        <delete dir="${javato.work.dir}/tmpbootclasses"/>
+        <delete file="${javato.work.dir}/javato.usedids"/>
+        <delete file="${javato.work.dir}/iidToLine.map"/>
+        <delete file="${javato.work.dir}/iidToLine.map.html"/>
+        <delete file="${javato.work.dir}/error.log"/>
+        <delete file="${javato.work.dir}/error.list"/>
+        <delete file="${javato.work.dir}/error.stat"/>
+    </target>
+
+    <target name="instr" description="run instrumentor" depends="clean">
+        <!--
+              Required poperties:
+                  javato.work.dir
+                  javato.app.main.class
+              Optional properties:
+                  javato.app.instr.dir
+                  javato.app.class.path
+                  javato.app.boot.list
+                  javato.instops
+          -->
+        <fail unless="javato.work.dir"/>
+        <fail unless="javato.app.main.class"/>
+        <property name="javato.app.instr.dir" value=""/>
+        <property name="javato.app.class.path" value=""/>
+        <property name="javato.app.boot.list" value=""/>
+        <property name="javato.instops" value=""/>
+        <if>
+            <equals arg1="${javato.app.instr.dir}" arg2=""/>
+            <then>
+                <property name="javato_instops" value="${javato.instops}"/>
+                <path id="javato_app_class_path">
+                    <pathelement path="${javato.app.class.path}"/>
+                </path>
+            </then>
+            <else>
+                <property name="javato_instops"
+                          value="${javato.instops} -process-dir ${javato.app.instr.dir}"/>
+                <path id="javato_app_class_path">
+                    <pathelement location="${javato.app.instr.dir}"/>
+                    <pathelement path="${javato.app.class.path}"/>
+                </path>
+            </else>
+        </if>
+        <java classname="javato.activetesting.instrumentor.InstrumentorForActiveTesting"
+              fork="true" dir="${javato.work.dir}" maxmemory="1024m">
+            <arg value="-keep-line-number"/>
+            <arg line="${javato_instops}"/>
+            <arg value="-no-output-inner-classes-attribute"/>
+            <arg value="-d"/>
+            <arg file="${javato.work.dir}/tmpclasses"/>
+            <arg value="-x"/>
+            <arg value="javato"/>
+            <arg value="--app"/>
+            <arg value="${javato.app.main.class}"/>
+            <classpath>
+                <pathelement location="${javato.home.dir}/classes"/>
+                <pathelement location="${javato.home.dir}/lib/soot.jar"/>
+                <path refid="javato_app_class_path"/>
+            </classpath>
+        </java>
+        <if>
+            <not>
+                <equals arg1="${javato.app.boot.list}" arg2=""/>
+            </not>
+            <then>
+                <mkdir dir="${javato.work.dir}/tmpbootclasses"/>
+                <for param="bootitem" list="${javato.app.boot.list}">
+                    <sequential>
+                        <var name="srcdir"
+                             value="${javato.work.dir}/tmpclasses/@{bootitem}"/>
+                        <var name="dstdir"
+                             value="${javato.work.dir}/tmpbootclasses/@{bootitem}"/>
+                        <mkdir dir="${dstdir}"/>
+                        <move todir="${dstdir}">
+                            <fileset dir="${srcdir}"/>
+                        </move>
+                    </sequential>
+                </for>
+            </then>
+        </if>
+    </target>
+
+    <target name="analysis-once" description="run analysis once">
+        <!--
+              Required properties:
+                  javato.work.dir
+                  javato.app.main.class
+                  javato.activetesting.analysis.class
+              Optional properties:
+                  javato.app.args
+                  javato.app.class.path
+          -->
+        <fail unless="javato.work.dir"/>
+        <fail unless="javato.app.main.class"/>
+        <fail unless="javato.activetesting.analysis.class"/>
+        <property name="javato.app.args" value=""/>
+        <property name="javato.app.class.path" value=""/>
+        <if>
+            <available file="${javato.work.dir}/tmpbootclasses"/>
+            <then>
+                <property name="jvm_args"
+                          value="-ea -Xbootclasspath/p:tmpbootclasses:${javato.home.dir}/classes"/>
+            </then>
+            <else>
+                <property name="jvm_args" value="-ea"/>
+            </else>
+        </if>
+        <stopwatch name="timer" action="start"/>
+        <java classname="${javato.app.main.class}"
+              fork="true" dir="${javato.work.dir}" maxmemory="1024m">
+            <arg line="${javato.app.args}"/>
+            <jvmarg line="${jvm_args}"/>
+            <!--            <sysproperty key="javato.deadlock.goodlock" value="false"/> -->
+            <syspropertyset>
+                <propertyref builtin="all"/>
+            </syspropertyset>
+            <classpath>
+                <pathelement location="${javato.work.dir}/tmpclasses"/>
+                <pathelement path="${javato.app.class.path}"/>
+                <pathelement location="${javato.home.dir}/classes"/>
+            </classpath>
+        </java>
+        <stopwatch name="timer" action="total"/>
+        <echo message="${timer}${line.separator}"
+              file="${javato.work.dir}/error.stat" append="true"/>
+    </target>
+
+    <target name="active-loop" description="run active checker repeatedly">
+        <!--
+              Required properties:
+                  javato.work.dir
+                  javato.app.main.class
+                  javato.activetesting.trialnum.list
+                  javato.deadlock.cyclenum.file
+              Optional properties:
+                  javato.app.args
+                  javato.app.class.path
+              Forbidden properties:
+                  javato.deadlock.cyclenum
+                  javato.deadlock.cyclenum.list
+          -->
+        <fail unless="javato.work.dir"/>
+        <fail unless="javato.app.main.class"/>
+        <fail unless="javato.activetesting.trialnum.list"/>
+        <fail unless="javato.activetesting.errorlist.file"/>
+        <fail if="javato.activetesting.errornum"/>
+        <fail if="javato.activetesting.errorlist"/>
+        <loadfile property="javato.activetesting.errorlist"
+                  srcFile="${javato.activetesting.errorlist.file}">
+            <filterchain>
+                <striplinebreaks/>
+            </filterchain>
+        </loadfile>
+        <property name="javato.activetesting.errorlist" value=""/>
+        <for param="errornum" list="${javato.activetesting.errorlist}">
+            <sequential>
+                <echo message="Iteration: @{errornum}"/>
+                <echo message="------------------"/>
+                <for param="trialnum"
+                     list="${javato.activetesting.trialnum.list}">
+                    <sequential>
+                        <echo message="Sub-iteration: @{errornum}:@{trialnum}"/>
+                        <echo message="------------------"/>
+                        <antcall target="analysis-once">
+                            <param name="javato.activetesting.errorid"
+                                   value="@{errornum}"/>
+                        </antcall>
+                    </sequential>
+                </for>
+            </sequential>
+        </for>
+    </target>
+
+    <target name="usage" description="print usage instructions">
+        <echo message="Welcome to Javato!"/>
+        <echo message="Use 'ant -p' to see all valid targets."/>
+    </target>
+
+    <target name="test_race1">
+        <echo message="3 potential and 3 real races"/>
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestRace1"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_race2">
+        <echo message="0 potential and 0 real race"/>
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestRace2"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_race3">
+        <echo message="3 potential and 3 real races"/>
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestRace3"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_race4">
+        <echo message="3 potential and 3 real races"/>
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestRace4"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_race5">
+        <echo message="0 potential and 0 real races"/>
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestRace5"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_race6">
+        <echo message="3 potential and 3 real races"/>
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestRace6"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_race7">
+        <echo message="0 potential and 0 real races"/>
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestRace7"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_race8">
+        <echo message="? of potential and 0 real races"/>
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestRace8"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_race9">
+        <echo message="? of potential and 0 real races"/>
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestRace9"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_race10">
+        <echo message="3 potential and 3 real races"/>
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestRace10"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_race11">
+        <echo message="3 potential and 3 real races"/>
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestRace11"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_sor">
+        <echo message="8 potential and 0 real race"/>
+        <property name="javato.work.dir" value="${benchdir}/sor"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.sor.Sor"/>
+        <property name="javato.app.args" value="10 10"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_hedc">
+        <echo message="9 potential and 1 real race"/>
+        <property name="javato.work.dir" value="${benchdir}/hedc"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/lib/servlet.jar"/>
+        <property name="javato.app.main.class" value="benchmarks.hedc.Tester"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_cache4j">
+        <echo message="18 potential and 3 real races"/>
+        <property name="javato.work.dir" value="${javato.home.dir}/cache4j"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/build/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/build/classes"/>
+        <property name="javato.app.main.class" value="net.sf.cache4j.test.Tester"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+
+    <target name="test_list">
+        <echo message="# of potential and real races are the same"/>
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.dstest.MTListTest"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_array_list">
+        <echo message="# of potential and real races are the same"/>
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.dstest.MTArrayListTest"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_set">
+        <echo message="# of potential and real races are the same"/>
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.dstest.MTSetTest"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_tree_set">
+        <echo message="# of potential and real races are the same"/>
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.dstest.MTTreeSetTest"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_linked_hash_set">
+        <echo message="# of potential and real races are the same"/>
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.dstest.MTLinkedHashSetTest"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_vector">
+        <echo message="# of potential and real races are the same"/>
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.dstest.MTVectorTest"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.HybridAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.RaceFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="racefuzzer">
+        <antcall target="test_race1"/>
+        <antcall target="test_race2"/>
+        <antcall target="test_race3"/>
+        <antcall target="test_race4"/>
+        <antcall target="test_race5"/>
+        <antcall target="test_race6"/>
+        <antcall target="test_race7"/>
+        <antcall target="test_race8"/>
+        <antcall target="test_race9"/>
+        <antcall target="test_race10"/>
+        <antcall target="test_race11"/>
+        <antcall target="test_sor"/>
+        <antcall target="test_hedc"/>
+        <antcall target="test_cache4j"/>
+        <antcall target="test_list"/>
+        <antcall target="test_array_list"/>
+        <antcall target="test_set"/>
+        <antcall target="test_tree_set"/>
+        <antcall target="test_linked_hash_set"/>
+        <antcall target="test_vector"/>
+    </target>
+
+    <target name="test_1">
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestDeadlock1"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.IGoodlockAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.DeadlockFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_1a">
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestDeadlock1a"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.IGoodlockAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.DeadlockFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_1b">
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestDeadlock1b"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.IGoodlockAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.DeadlockFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_2">
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestDeadlock2"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.IGoodlockAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.DeadlockFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_2a">
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestDeadlock2a"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.IGoodlockAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.DeadlockFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_3">
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestDeadlock3"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.IGoodlockAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.DeadlockFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_4">
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestDeadlock4"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.IGoodlockAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.DeadlockFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_4b">
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestDeadlock4b"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.IGoodlockAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.DeadlockFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_5">
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestDeadlock5"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.IGoodlockAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.DeadlockFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_6">
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestDeadlock6"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <property name="javato.deadlock.cycle.length" value="0"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.IGoodlockAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.DeadlockFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_7">
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestDeadlock7"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.IGoodlockAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.DeadlockFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+    <target name="test_8">
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestDeadlock8"/>
+        <property name="javato.activetesting.errorlist.file" value="${javato.work.dir}/error.list"/>
+        <property name="javato.activetesting.trialnum.list" value="1,2,3,4,5,6,7,8,9,10"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.IGoodlockAnalysis"/>
+        </antcall>
+        <antcall target="active-loop">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.DeadlockFuzzerAnalysis"/>
+        </antcall>
+    </target>
+
+
+    <target name="deadlockfuzzer">
+        <antcall target="test_1"/>
+        <antcall target="test_1a"/>
+        <antcall target="test_1b"/>
+        <antcall target="test_2"/>
+        <antcall target="test_2a"/>
+        <antcall target="test_3"/>
+        <antcall target="test_4"/>
+        <antcall target="test_4b"/>
+        <antcall target="test_5"/>
+        <antcall target="test_6"/>
+        <antcall target="test_7"/>
+        <antcall target="test_8"/>
+    </target>
+
+    <target name="print_trace">
+        <property name="javato.work.dir" value="${benchdir}"/>
+        <property name="javato.app.instr.dir" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.class.path" value="${javato.work.dir}/classes"/>
+        <property name="javato.app.main.class" value="benchmarks.testcases.TestRace5"/>
+        <antcall target="instr"/>
+        <antcall target="analysis-once">
+            <param name="javato.activetesting.analysis.class" value="javato.activetesting.PrintTraceAnalysis"/>
+        </antcall>
+    </target>
+
+</project>
+

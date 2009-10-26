@@ -1,0 +1,36 @@
+INSTALL
+-------
+
+download calfuzzer.tar.gz from http://srl.cs.berkeley.edu/~ksen/calfuzzer/
+tar zxvf calfuzzer.tar.gz
+cd calfuzzer
+ant
+
+TEST
+----
+
+ant -f run.xml deadlockfuzzer
+
+You should run
+
+ant -f run.xml hw2 
+
+to test your implementation of RaceFuzzer.
+
+HOW CAN I WRITE MY OWN ANALYSIS?
+--------------------------
+Check out the tool paper activetool.pdfpresent in the current directory.
+
+See
+
+src/javato/activetesting/DeadlockFuzzerAnalysis.java
+src/javato/activetesting/IGoodlockAnalysis.java
+
+for an implementation of DeadlockFuzzer.  Note that this is not the optimized implementation reported in the PLDI'09 paper.  You need to implement the classes
+
+src/javato/activetesting/RaceFuzzerAnalysis.java
+src/javato/activetesting/HybridAnalysis.java
+
+
+See the target deadlockfuzzer, hw2, test_race1, test_1 in run.xml for details on how to invoke DeadlockFuzzer and RaceFuzzer.
+

@@ -1,0 +1,107 @@
+-----------------------------Real race detected (2)---------------------------
+***************** Thread Thread[main,5,main] creating race at net.sf.cache4j.CacheCleaner:CacheCleaner.java:55
+net.sf.cache4j.CacheFactory:CacheFactory.java:153
+net.sf.cache4j.test.SynchronizedCacheTest:SynchronizedCacheTest.java:274
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:-2
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:39
+sun.reflect.DelegatingMethodAccessorImpl:DelegatingMethodAccessorImpl.java:25
+java.lang.reflect.Method:Method.java:585
+net.sf.cache4j.test.Tester:Tester.java:108
+net.sf.cache4j.test.Tester:Tester.java:48
+-----------------------------Real race detected (2)---------------------------
+***************** Thread Thread[main,5,main] creating race at net.sf.cache4j.CacheCleaner:CacheCleaner.java:55
+net.sf.cache4j.CacheFactory:CacheFactory.java:153
+net.sf.cache4j.test.SynchronizedCacheTest:SynchronizedCacheTest.java:274
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:-2
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:39
+sun.reflect.DelegatingMethodAccessorImpl:DelegatingMethodAccessorImpl.java:25
+java.lang.reflect.Method:Method.java:585
+net.sf.cache4j.test.Tester:Tester.java:108
+net.sf.cache4j.test.Tester:Tester.java:48
+***************** Thread Thread[net.sf.cache4j.CacheCleaner,5,main] creating race at net.sf.cache4j.CacheCleaner:CacheCleaner.java:85
+-----------------------------Real race detected (2)---------------------------
+***************** Thread Thread[main,5,main] creating race at net.sf.cache4j.CacheCleaner:CacheCleaner.java:55
+net.sf.cache4j.CacheFactory:CacheFactory.java:153
+net.sf.cache4j.test.SynchronizedCacheTest:SynchronizedCacheTest.java:274
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:-2
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:39
+sun.reflect.DelegatingMethodAccessorImpl:DelegatingMethodAccessorImpl.java:25
+java.lang.reflect.Method:Method.java:585
+net.sf.cache4j.test.Tester:Tester.java:108
+net.sf.cache4j.test.Tester:Tester.java:48
+-----------------------------Real race detected (2)---------------------------
+***************** Thread Thread[main,5,main] creating race at net.sf.cache4j.CacheCleaner:CacheCleaner.java:55
+net.sf.cache4j.CacheFactory:CacheFactory.java:153
+net.sf.cache4j.test.SynchronizedCacheTest:SynchronizedCacheTest.java:274
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:-2
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:39
+sun.reflect.DelegatingMethodAccessorImpl:DelegatingMethodAccessorImpl.java:25
+java.lang.reflect.Method:Method.java:585
+net.sf.cache4j.test.Tester:Tester.java:108
+net.sf.cache4j.test.Tester:Tester.java:48
+-----------------------------Real race detected (2)---------------------------
+***************** Thread Thread[main,5,main] creating race at net.sf.cache4j.CacheCleaner:CacheCleaner.java:55
+net.sf.cache4j.CacheFactory:CacheFactory.java:153
+net.sf.cache4j.test.SynchronizedCacheTest:SynchronizedCacheTest.java:274
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:-2
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:39
+sun.reflect.DelegatingMethodAccessorImpl:DelegatingMethodAccessorImpl.java:25
+java.lang.reflect.Method:Method.java:585
+net.sf.cache4j.test.Tester:Tester.java:108
+net.sf.cache4j.test.Tester:Tester.java:48
+***************** Thread Thread[net.sf.cache4j.CacheCleaner,5,main] creating race at net.sf.cache4j.CacheCleaner:CacheCleaner.java:85
+-----------------------------Real race detected (3)---------------------------
+***************** Thread Thread[main,5,main] creating race at net.sf.cache4j.CacheCleaner:CacheCleaner.java:58
+net.sf.cache4j.CacheFactory:CacheFactory.java:153
+net.sf.cache4j.test.SynchronizedCacheTest:SynchronizedCacheTest.java:274
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:-2
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:39
+sun.reflect.DelegatingMethodAccessorImpl:DelegatingMethodAccessorImpl.java:25
+java.lang.reflect.Method:Method.java:585
+net.sf.cache4j.test.Tester:Tester.java:108
+net.sf.cache4j.test.Tester:Tester.java:48
+***************** Thread Thread[net.sf.cache4j.CacheCleaner,5,main] creating race at net.sf.cache4j.CacheCleaner:CacheCleaner.java:83
+-----------------------------Real race detected (3)---------------------------
+***************** Thread Thread[net.sf.cache4j.CacheCleaner,5,main] creating race at net.sf.cache4j.CacheCleaner:CacheCleaner.java:83
+***************** Thread Thread[main,5,main] creating race at net.sf.cache4j.CacheCleaner:CacheCleaner.java:58
+net.sf.cache4j.CacheFactory:CacheFactory.java:153
+net.sf.cache4j.test.SynchronizedCacheTest:SynchronizedCacheTest.java:274
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:-2
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:39
+sun.reflect.DelegatingMethodAccessorImpl:DelegatingMethodAccessorImpl.java:25
+java.lang.reflect.Method:Method.java:585
+net.sf.cache4j.test.Tester:Tester.java:108
+net.sf.cache4j.test.Tester:Tester.java:48
+-----------------------------Real race detected (3)---------------------------
+***************** Thread Thread[net.sf.cache4j.CacheCleaner,5,main] creating race at net.sf.cache4j.CacheCleaner:CacheCleaner.java:83
+***************** Thread Thread[main,5,main] creating race at net.sf.cache4j.CacheCleaner:CacheCleaner.java:58
+net.sf.cache4j.CacheFactory:CacheFactory.java:153
+net.sf.cache4j.test.SynchronizedCacheTest:SynchronizedCacheTest.java:274
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:-2
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:39
+sun.reflect.DelegatingMethodAccessorImpl:DelegatingMethodAccessorImpl.java:25
+java.lang.reflect.Method:Method.java:585
+net.sf.cache4j.test.Tester:Tester.java:108
+net.sf.cache4j.test.Tester:Tester.java:48
+-----------------------------Real race detected (3)---------------------------
+***************** Thread Thread[main,5,main] creating race at net.sf.cache4j.CacheCleaner:CacheCleaner.java:58
+net.sf.cache4j.CacheFactory:CacheFactory.java:153
+net.sf.cache4j.test.SynchronizedCacheTest:SynchronizedCacheTest.java:274
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:-2
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:39
+sun.reflect.DelegatingMethodAccessorImpl:DelegatingMethodAccessorImpl.java:25
+java.lang.reflect.Method:Method.java:585
+net.sf.cache4j.test.Tester:Tester.java:108
+net.sf.cache4j.test.Tester:Tester.java:48
+***************** Thread Thread[net.sf.cache4j.CacheCleaner,5,main] creating race at net.sf.cache4j.CacheCleaner:CacheCleaner.java:83
+-----------------------------Real race detected (3)---------------------------
+***************** Thread Thread[main,5,main] creating race at net.sf.cache4j.CacheCleaner:CacheCleaner.java:58
+net.sf.cache4j.CacheFactory:CacheFactory.java:153
+net.sf.cache4j.test.SynchronizedCacheTest:SynchronizedCacheTest.java:274
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:-2
+sun.reflect.NativeMethodAccessorImpl:NativeMethodAccessorImpl.java:39
+sun.reflect.DelegatingMethodAccessorImpl:DelegatingMethodAccessorImpl.java:25
+java.lang.reflect.Method:Method.java:585
+net.sf.cache4j.test.Tester:Tester.java:108
+net.sf.cache4j.test.Tester:Tester.java:48
+***************** Thread Thread[net.sf.cache4j.CacheCleaner,5,main] creating race at net.sf.cache4j.CacheCleaner:CacheCleaner.java:83

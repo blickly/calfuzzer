@@ -8,6 +8,8 @@ import javato.activetesting.lockset.LockSet;
 import javato.activetesting.lockset.LockSetTracker;
 import javato.activetesting.reentrant.IgnoreRentrantLock;
 
+import java.util.HashMap;
+
 /**
  * Copyright (c) 2007-2008,
  * Koushik Sen    <ksen@cs.berkeley.edu>
@@ -165,16 +167,30 @@ public class HybridAnalysis extends AnalysisImpl {
     }
 }
 
+class VectorClock {
+  public static final int MAX_THREADS = 10;
+  public Integer[] vc;
+  VectorClock() {
+    vc = new Integer[MAX_THREADS];
+    for (int i = 0; i < MAX_THREADS; ++i) {
+      vc[i] = 0;
+    }
+  }
+}
+
 class VectorClockTracker {
-  VectorClockTracker() { }
+  private VectorClock[] vectorClocks;
+
+  VectorClockTracker() {
+    vectorClocks = new VectorClock[VectorClock.MAX_THREADS];
+  }
   public void startBefore(Integer parent, Integer child) { }
   public void waitAfter(Integer thread, Integer lock) { }
   public void notifyBefore(Integer thread, Integer lock) { }
   public void joinAfter(Integer parent, Integer child) { }
 
-  public Integer getVectorClock(Integer thread) {
-    return new Integer(0);
-//            eb.checkRace(iid, thread, memory, false, vcTracker.getVectorClock(thread), ls);
+  public VectorClock getVectorClock(Integer thread) {
+    return vectorClocks[thread];
   }
 
 }
@@ -182,10 +198,10 @@ class VectorClockTracker {
 class HybridRaceTracker {
   HybridRaceTracker() { }
 
-  public void checkRace(Integer iid, Integer thread, Long memory, boolean isRead, Integer vClock, LockSet ls) { }
+  public void checkRace(Integer iid, Integer thread, Long memory, boolean isRead, VectorClock vClock, LockSet ls) { }
 //            eb.checkRace(iid, thread, memory, false, vcTracker.getVectorClock(thread), ls);
 
-  public void addEvent(Integer iid, Integer thread, Long memory, boolean isRead, Integer vClock, LockSet ls) { }
+  public void addEvent(Integer iid, Integer thread, Long memory, boolean isRead, VectorClock vClock, LockSet ls) { }
 //            eb.addEvent(iid, thread, memory, false, vcTracker.getVectorClock(thread), ls);
 
 //    The following method call creates a file "error.list" containing the list of numbers "1,2,3,...,nRaces"

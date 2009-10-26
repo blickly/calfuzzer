@@ -92,4 +92,18 @@ class HybridRaceTracker {
     return races.size();
   }
 
+  public static LinkedHashSet<CommutativePair> getRacesFromFile() {
+    LinkedHashSet<CommutativePair> savedRaces = null;
+    try {
+      java.io.FileInputStream fis = new java.io.FileInputStream("error.log");
+      java.io.ObjectInputStream ois = new java.io.ObjectInputStream(fis);
+      savedRaces = (LinkedHashSet<CommutativePair>) ois.readObject();
+    } catch (java.io.IOException e) {
+      System.out.println("Failed to read object from file: " + e);
+    } catch (java.lang.ClassNotFoundException e) {
+      System.out.println("Data in 'error.log' seems invalid: " + e);
+    }
+    return savedRaces;
+  }
+
 }

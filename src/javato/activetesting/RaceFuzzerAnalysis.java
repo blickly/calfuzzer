@@ -4,6 +4,10 @@ import javato.activetesting.analysis.CheckerAnalysisImpl;
 import javato.activetesting.common.Parameters;
 
 import java.util.LinkedHashSet;
+import java.util.Collection;
+
+import javato.activetesting.activechecker.ActiveChecker;
+import javato.activetesting.HybridRaceTracker;
 
 /**
  * Copyright (c) 2007-2008,
@@ -38,14 +42,14 @@ import java.util.LinkedHashSet;
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 public class RaceFuzzerAnalysis extends CheckerAnalysisImpl {
-//    private CommutativePair racePair;
+    private CommutativePair racePair;
 
     public void initialize() {
         if (Parameters.errorId >= 0) {
 //    Your code goes here.
 //    In my implementation I had the following code:
-//            LinkedHashSet<CommutativePair> seenRaces = HybridRaceTracker.getRacesFromFile();
-//            racePair = (CommutativePair) (seenRaces.toArray())[Parameters.errorId - 1];
+            LinkedHashSet<CommutativePair> seenRaces = HybridRaceTracker.getRacesFromFile();
+            racePair = (CommutativePair) (seenRaces.toArray())[Parameters.errorId - 1];
         }
     }
 
@@ -92,26 +96,33 @@ public class RaceFuzzerAnalysis extends CheckerAnalysisImpl {
     public void readBefore(Integer iid, Integer thread, Long memory) {
 //    Your code goes here.
 //    In my implementation I had the following code:
-//        if (racePair != null && racePair.contains(iid)) {
-//            synchronized (ActiveChecker.lock) {
-//                (new RaceChecker(memory, false, iid)).check();
-//            }
-//            ActiveChecker.blockIfRequired();
-//        }
+        if (racePair != null && racePair.contains(iid)) {
+            synchronized (ActiveChecker.lock) {
+                (new RaceChecker(memory, false, iid)).check();
+            }
+            ActiveChecker.blockIfRequired();
+        }
     }
 
     public void writeBefore(Integer iid, Integer thread, Long memory) {
 //    Your code goes here.
 //    In my implementation I had the following code:
-//        if (racePair != null && racePair.contains(iid)) {
-//            synchronized (ActiveChecker.lock) {
-//                (new RaceChecker(memory, true, iid)).check();
-//            }
-//            ActiveChecker.blockIfRequired();
-//        }
+        if (racePair != null && racePair.contains(iid)) {
+            synchronized (ActiveChecker.lock) {
+                (new RaceChecker(memory, true, iid)).check();
+            }
+            ActiveChecker.blockIfRequired();
+        }
     }
 
     public void finish() {
 //  ignore this
+    }
+}
+
+class RaceChecker extends ActiveChecker {
+    RaceChecker(Long memory, boolean isWrite, Integer iid) { }
+    public void check(Collection<ActiveChecker> checkers) {
+      block(0);
     }
 }

@@ -162,6 +162,8 @@ public class HybridAnalysis extends AnalysisImpl {
 //    Your code goes here.
 //    In my implementation I had the following code:
             nRaces = eb.dumpRaces();
+            System.out.println("*--> HybridAnalysis reveals " + nRaces
+                + " potential races");
 //    The following method call creates a file "error.list" containing the list of numbers "1,2,3,...,nRaces"
 //    This file is used by run.xml to initialize Parameters.errorId with a number from from the list.
 //    Parameters.errorId tells RaceFuzzer the id of the race that RaceFuzzer should try to create
@@ -196,6 +198,18 @@ class VectorClock {
     }
     return true;
   }
+
+  public void increment(Integer thread) {
+    this.vc[thread]++;
+  }
+
+  public String toString() {
+    String s = "[";
+    for (int i = 0; i < 20; ++i) {
+      s += vc[i] + ",";
+    }
+    return s + "]";
+  }
 }
 
 class VectorClockTracker {
@@ -205,26 +219,34 @@ class VectorClockTracker {
   VectorClockTracker() {
     for (int i = 0; i < VectorClock.MAX_THREADS; ++i) {
       vectorClocks[i] = new VectorClock();
+      vectorClocks[i].increment(i);
     }
   }
 
   public void startBefore(Integer parent, Integer child) {
     vectorClocks[child].maximumUpdate(vectorClocks[parent]);
+    vectorClocks[child].increment(child);
+    vectorClocks[parent].increment(parent);
   }
   public void joinAfter(Integer parent, Integer child) {
     vectorClocks[parent].maximumUpdate(vectorClocks[child]);
+    vectorClocks[parent].increment(parent);
+    vectorClocks[child].increment(child);
   }
 
   public void notifyBefore(Integer thread, Integer lock) {
     VectorClock lc = lockClocks.get(lock);
+    lockClocks.remove(lock);
     if (lc != null) {
       vectorClocks[thread].maximumUpdate(lc);
+      vectorClocks[thread].increment(thread);
     }
   }
   public void waitAfter(Integer thread, Integer lock) {
     VectorClock lc = lockClocks.get(lock);
     if (lc != null) {
       lc.maximumUpdate(vectorClocks[thread]);
+      vectorClocks[thread].increment(thread);
     } else {
       lc = vectorClocks[thread];
     }

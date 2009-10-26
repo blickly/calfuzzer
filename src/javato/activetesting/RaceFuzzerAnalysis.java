@@ -123,6 +123,20 @@ public class RaceFuzzerAnalysis extends CheckerAnalysisImpl {
 class RaceChecker extends ActiveChecker {
     RaceChecker(Long memory, boolean isWrite, Integer iid) { }
     public void check(Collection<ActiveChecker> checkers) {
+      int rc=0, nrc = 0;
+      for (ActiveChecker ac : checkers) {
+        if (ac instanceof RaceChecker) {
+          rc++;
+        } else { nrc++; }
+      }
+      System.out.println("==================================================");
+      System.out.println("==================================================");
+      System.out.println("==================================================");
+      System.out.println("Found " + rc + " RaceCheckers and "
+          + nrc + "other checkers");
+      System.out.println("==================================================");
+      System.out.println("==================================================");
+      System.out.println("==================================================");
       block(0);
     }
 }

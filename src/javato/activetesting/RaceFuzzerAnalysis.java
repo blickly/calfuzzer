@@ -8,6 +8,7 @@ import java.util.Collection;
 
 import javato.activetesting.activechecker.ActiveChecker;
 import javato.activetesting.HybridRaceTracker;
+import javato.activetesting.analysis.Observer;
 
 /**
  * Copyright (c) 2007-2008,
@@ -50,8 +51,8 @@ public class RaceFuzzerAnalysis extends CheckerAnalysisImpl {
 //    In my implementation I had the following code:
             LinkedHashSet<CommutativePair> seenRaces = HybridRaceTracker.getRacesFromFile();
             racePair = (CommutativePair) (seenRaces.toArray())[Parameters.errorId - 1];
-            System.out.println("=-= seenRaces: " + seenRaces
-                + " racePair: (" + racePair.x + "," + racePair.y + ")");
+            //System.out.println("=-= seenRaces: " + seenRaces
+            //    + " racePair: " + racePair);
         }
     }
 
@@ -132,17 +133,25 @@ class RaceChecker extends ActiveChecker {
       this.iid = iid;
     }
     public void check(Collection<ActiveChecker> checkers) {
-      System.out.println("==================================================");
-      System.out.println("Found " + checkers.size() + " checkers");
-      int rc=0, nrc = 0;
+      //System.out.println("Found " + checkers.size() + " checkers");
       for (ActiveChecker ac : checkers) {
         if (ac instanceof RaceChecker) {
-          rc++;
-        } else { nrc++; }
+          RaceChecker rc = (RaceChecker) ac;
+          if (this.isRace(rc)) {
+            System.out.println("Found real race between "
+                + Observer.getIidToLine(this.iid) + "[" + this.iid + "] and "
+                + Observer.getIidToLine(rc.iid) + "[" + rc.iid + "]");
+            if (this.rand.nextBoolean()) {
+              this.block(0);
+              rc.unblock(0);
+            }
+            return;
+          }
+        }
       }
-      System.out.println("(" + rc + " RaceCheckers and "
-          + nrc + " other checkers)");
-      System.out.println("==================================================");
       block(0);
+    }
+    public boolean isRace(RaceChecker rhs) {
+      return this.memory.equals(rhs.memory) && (this.isWrite || rhs.isWrite);
     }
 }

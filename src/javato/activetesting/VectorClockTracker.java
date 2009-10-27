@@ -74,7 +74,6 @@ class VectorClockTracker {
     if (childClock == null) childClock = new VectorClock(child);
 
     parClock.maximumUpdate(childClock);
-    childClock.increment(child);
     parClock.increment(parent);
 
     threadClocks.put(child, childClock);
@@ -90,6 +89,7 @@ class VectorClockTracker {
 
       clock.maximumUpdate(lc);
       clock.increment(thread);
+      threadClocks.put(thread, clock);
     }
   }
   public void waitAfter(Integer thread, Integer lock) {

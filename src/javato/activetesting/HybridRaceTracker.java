@@ -1,7 +1,7 @@
 package javato.activetesting;
 
 import javato.activetesting.lockset.LockSet;
-import javato.activetesting.HybridAnalysis;
+import javato.activetesting.analysis.Observer;
 
 import java.util.LinkedList;
 import java.util.LinkedHashSet;
@@ -24,7 +24,8 @@ class CommutativePair implements java.io.Serializable {
   }
 
   public String toString() {
-    return "(" + x + "," + y + ")";
+    return "(" + Observer.getIidToLine(x) + "[" + x + "],"
+      + Observer.getIidToLine(y) + "[" + y + "])";
   }
 
   public int hashCode() {

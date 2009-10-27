@@ -174,39 +174,43 @@ public class HybridAnalysis extends AnalysisImpl {
 
 class VectorClock {
   public static final int MAX_THREADS = 155;
-  public Integer[] vc;
-  VectorClock() {
-    vc = new Integer[MAX_THREADS];
-    for (int i = 0; i < MAX_THREADS; ++i) {
-      vc[i] = 0;
-    }
-  }
+  public Map<Integer, Integer> vc = new HashMap<Integer, Integer>();
 
   public void maximumUpdate(VectorClock rhs) {
-    for (int i = 0; i < MAX_THREADS; ++i) {
-      if (rhs.vc[i] > this.vc[i]) {
-        this.vc[i] = rhs.vc[i];
-      }
+    java.util.Set<Integer> threads = new java.util.HashSet<Integer>();
+    threads.addAll(this.vc.keySet());
+    threads.addAll(rhs.vc.keySet());
+    for (Integer i : threads) {
+      Integer li = this.vc.get(i);
+      Integer ri = rhs.vc.get(i);
+      if (li == null) li = 0;
+      if (ri == null) ri = 0;
+      this.vc.put(i, java.lang.Math.max(li, ri));
     }
   }
 
   public boolean lessThanEqual(VectorClock rhs) {
-    for (int i = 0; i < MAX_THREADS; ++i) {
-      if (this.vc[i] > rhs.vc[i]) {
-        return false;
-      }
+    for (Integer i : this.vc.keySet()) {
+      Integer ri = rhs.vc.get(i);
+      if (ri == null) continue;
+      Integer li = this.vc.get(i);
+      if (li > ri) return false;
     }
     return true;
   }
 
   public void increment(Integer thread) {
-    this.vc[thread]++;
+    Integer time = this.vc.get(thread);
+    if (time == null) {
+      time = new Integer(0);
+    }
+    this.vc.put(thread, time+1);
   }
 
   public String toString() {
     String s = "[";
-    for (int i = 0; i < 20; ++i) {
-      s += vc[i] + ",";
+    for (Integer i : this.vc.keySet()) {
+      s += " t" + i + ": " + this.vc.get(i);
     }
     return s + "]";
   }

@@ -50,6 +50,8 @@ public class RaceFuzzerAnalysis extends CheckerAnalysisImpl {
 //    In my implementation I had the following code:
             LinkedHashSet<CommutativePair> seenRaces = HybridRaceTracker.getRacesFromFile();
             racePair = (CommutativePair) (seenRaces.toArray())[Parameters.errorId - 1];
+            System.out.println("=-= seenRaces: " + seenRaces
+                + " racePair: (" + racePair.x + "," + racePair.y + ")");
         }
     }
 
@@ -121,21 +123,25 @@ public class RaceFuzzerAnalysis extends CheckerAnalysisImpl {
 }
 
 class RaceChecker extends ActiveChecker {
-    RaceChecker(Long memory, boolean isWrite, Integer iid) { }
+    public Long memory;
+    public boolean isWrite;
+    public Integer iid;
+    RaceChecker(Long memory, boolean isWrite, Integer iid) {
+      this.memory = memory;
+      this.isWrite = isWrite;
+      this.iid = iid;
+    }
     public void check(Collection<ActiveChecker> checkers) {
+      System.out.println("==================================================");
+      System.out.println("Found " + checkers.size() + " checkers");
       int rc=0, nrc = 0;
       for (ActiveChecker ac : checkers) {
         if (ac instanceof RaceChecker) {
           rc++;
         } else { nrc++; }
       }
-      System.out.println("==================================================");
-      System.out.println("==================================================");
-      System.out.println("==================================================");
-      System.out.println("Found " + rc + " RaceCheckers and "
-          + nrc + "other checkers");
-      System.out.println("==================================================");
-      System.out.println("==================================================");
+      System.out.println("(" + rc + " RaceCheckers and "
+          + nrc + " other checkers)");
       System.out.println("==================================================");
       block(0);
     }

@@ -7,7 +7,6 @@ import java.util.LinkedList;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.TreeMap;
 
 class CommutativePair implements java.io.Serializable {
   Integer x, y;
@@ -22,6 +21,10 @@ class CommutativePair implements java.io.Serializable {
 
   public boolean contains(Integer z) {
     return x.equals(z) || y.equals(z);
+  }
+
+  public String toString() {
+    return "(" + x + "," + y + ")";
   }
 
   public int hashCode() {
@@ -89,16 +92,6 @@ class DatabaseQuery {
     this.needWrite = wr;
   }
 
-  /*
-  public int compareTo(Object o) {
-    DatabaseQuery rhs = (DatabaseQuery) o;
-    int comparison = this.memory.compareTo(rhs.memory);
-    if (comparison != 0) return comparison;
-    comparison = this.thread.compareTo(rhs.thread);
-    if (comparison != 0) return comparison;
-    return this.needWrite.compareTo(rhs.needWrite);
-  }
-  */
 
   public int hashCode() {
     return this.memory.hashCode() + this.thread.hashCode()
@@ -113,12 +106,13 @@ class DatabaseQuery {
 }
 
 class HybridRaceTracker {
-  //private Map<Long, LinkedList<Event>> eventsAtMem = new TreeMap<Long, LinkedList<Event>>();
-  private Map<DatabaseQuery, Event> eventDB = new HashMap<DatabaseQuery, Event>();
+  private Map<Long, LinkedList<Event>> eventsAtMem = new HashMap<Long, LinkedList<Event>>();
+  //private Map<DatabaseQuery, Event> eventDB = new HashMap<DatabaseQuery, Event>();
   private LinkedHashSet<CommutativePair> races = new LinkedHashSet<CommutativePair>();
 
   public void checkRace(Integer iid, Integer thread, Long memory, boolean isWrite, VectorClock vClock, LockSet ls) {
     Event thisEvent = new Event(iid, thread, memory, isWrite, vClock, ls);
+    /*
     for (int t = 0; t < 100; ++t) {
       if (thread.equals(t))
         continue;
@@ -128,8 +122,8 @@ class HybridRaceTracker {
       if (thisEvent.isRace(otherEvent)) {
         races.add(new CommutativePair(thisEvent.iid, otherEvent.iid));
       }
-    }
-    /*
+    }*/
+    
     LinkedList<Event> eventStack = eventsAtMem.get(memory);
     if (eventStack == null) {
       eventStack = new LinkedList<Event>();
@@ -140,30 +134,36 @@ class HybridRaceTracker {
         races.add(new CommutativePair(thisEvent.iid, e.iid));
       }
     }
-    */
+    
   }
 
   public void addEvent(Integer iid, Integer thread, Long memory, boolean isWrite, VectorClock vClock, LockSet ls) {
     Event e = new Event(iid, thread, memory, isWrite, vClock, ls);
+    /*
     System.out.println("Adding event to db: " + e);
     eventDB.put(new DatabaseQuery(memory, thread, false), e);
     if (isWrite) {
       eventDB.put(new DatabaseQuery(memory, thread, isWrite), e);
     }
-    /*
+    // */
+    
     LinkedList<Event> eventStack = eventsAtMem.get(memory);
     if (eventStack == null) {
       eventStack = new LinkedList<Event>();
       eventsAtMem.put(memory, eventStack);
     }
     eventStack.addFirst(e);
-    */
+    // */
   }
 
 //    The following method call creates a file "error.list" containing the list of numbers "1,2,3,...,nRaces"
 //    This file is used by run.xml to initialize Parameters.errorId with a number from from the list.
 //    Parameters.errorId tells RaceFuzzer the id of the race that RaceFuzzer should try to create
   public int dumpRaces() {
+    System.out.println("Potential races:");
+    for (CommutativePair cp : races) {
+      System.out.println(cp.toString());
+    }
     try {
       java.io.FileOutputStream fos = new java.io.FileOutputStream("error.log");
       java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream(fos);

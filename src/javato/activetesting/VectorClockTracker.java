@@ -6,7 +6,6 @@ import java.util.HashMap;
 class VectorClock {
   public Map<Integer, Integer> vc = new HashMap<Integer, Integer>();
 
-  VectorClock() {}
   VectorClock(Integer thread) {
     this.vc.put(thread, 1);
   }
@@ -27,7 +26,7 @@ class VectorClock {
   public boolean lessThanEqual(VectorClock rhs) {
     for (Integer i : this.vc.keySet()) {
       Integer ri = rhs.vc.get(i);
-      if (ri == null) continue;
+      if (ri == null) ri = new Integer(0);
       Integer li = this.vc.get(i);
       if (li > ri) return false;
     }
@@ -108,7 +107,7 @@ class VectorClockTracker {
 
   public VectorClock getVectorClock(Integer thread) {
     VectorClock clock = threadClocks.get(thread);
-    if (clock == null) return new VectorClock();
+    if (clock == null) return new VectorClock(thread);
     else return clock;
   }
 

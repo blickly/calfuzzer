@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.HashMap;
 
 class VectorClock {
-  public static final int MAX_THREADS = 155;
   public Map<Integer, Integer> vc = new HashMap<Integer, Integer>();
 
   VectorClock() {}
@@ -53,49 +52,64 @@ class VectorClock {
 }
 
 class VectorClockTracker {
-  private VectorClock[] vectorClocks = new VectorClock[VectorClock.MAX_THREADS];
   private Map<Integer, VectorClock> threadClocks = new HashMap<Integer, VectorClock>();
   private Map<Integer, VectorClock> lockClocks = new HashMap<Integer, VectorClock>();
 
-  VectorClockTracker() {
-    for (int i = 0; i < VectorClock.MAX_THREADS; ++i) {
-      vectorClocks[i] = new VectorClock();
-      vectorClocks[i].increment(i);
-    }
-  }
-
   public void startBefore(Integer parent, Integer child) {
-    vectorClocks[child].maximumUpdate(vectorClocks[parent]);
-    vectorClocks[child].increment(child);
-    vectorClocks[parent].increment(parent);
+    VectorClock parClock = threadClocks.get(parent);
+    if (parClock == null) parClock = new VectorClock(parent);
+    VectorClock childClock = threadClocks.get(child);
+    if (childClock == null) childClock = new VectorClock(child);
+
+    childClock.maximumUpdate(parClock);
+    childClock.increment(child);
+    parClock.increment(parent);
+
+    threadClocks.put(child, childClock);
+    threadClocks.put(parent, parClock);
   }
   public void joinAfter(Integer parent, Integer child) {
-    vectorClocks[parent].maximumUpdate(vectorClocks[child]);
-    vectorClocks[parent].increment(parent);
-    vectorClocks[child].increment(child);
+    VectorClock parClock = threadClocks.get(parent);
+    if (parClock == null) parClock = new VectorClock(parent);
+    VectorClock childClock = threadClocks.get(child);
+    if (childClock == null) childClock = new VectorClock(child);
+
+    parClock.maximumUpdate(childClock);
+    childClock.increment(child);
+    parClock.increment(parent);
+
+    threadClocks.put(child, childClock);
+    threadClocks.put(parent, parClock);
   }
 
   public void notifyBefore(Integer thread, Integer lock) {
     VectorClock lc = lockClocks.get(lock);
     lockClocks.remove(lock);
     if (lc != null) {
-      vectorClocks[thread].maximumUpdate(lc);
-      vectorClocks[thread].increment(thread);
+      VectorClock clock = threadClocks.get(thread);
+      if (clock == null) clock = new VectorClock(thread);
+
+      clock.maximumUpdate(lc);
+      clock.increment(thread);
     }
   }
   public void waitAfter(Integer thread, Integer lock) {
     VectorClock lc = lockClocks.get(lock);
+    VectorClock clock = threadClocks.get(thread);
+    if (clock == null) clock = new VectorClock(thread);
     if (lc != null) {
-      lc.maximumUpdate(vectorClocks[thread]);
-      vectorClocks[thread].increment(thread);
+      lc.maximumUpdate(clock);
     } else {
-      lc = vectorClocks[thread];
+      lc = clock;
     }
+    clock.increment(thread);
     lockClocks.put(lock, lc);
   }
 
   public VectorClock getVectorClock(Integer thread) {
-    return vectorClocks[thread];
+    VectorClock clock = threadClocks.get(thread);
+    if (clock == null) return new VectorClock();
+    else return clock;
   }
 
 }

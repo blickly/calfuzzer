@@ -62,11 +62,16 @@ class Event {
       && !this.vClock.lessThanEqual(rhs.vClock)
       && !rhs.vClock.lessThanEqual(this.vClock)
       && !this.ls.intersects(rhs.ls);
+    if (result) {
+      System.out.println("Potential race between " + this + " and " + rhs);
+    }
+    /*
     System.out.println("Checking race between " + this + " and " + rhs);
     System.out.println("(result = " + result + ")");
     System.out.println("Clock incomparable: " +
       (!this.vClock.lessThanEqual(rhs.vClock)
       && !rhs.vClock.lessThanEqual(this.vClock)));
+    */
     return result;
   }
 
@@ -93,7 +98,6 @@ class DatabaseQuery {
     this.needWrite = wr;
   }
 
-
   public int hashCode() {
     return this.memory.hashCode() + this.thread.hashCode()
       + this.needWrite.hashCode();
@@ -108,7 +112,7 @@ class DatabaseQuery {
 
 class HybridRaceTracker {
   private Map<Long, LinkedList<Event>> eventsAtMem = new HashMap<Long, LinkedList<Event>>();
-  //private Map<DatabaseQuery, Event> eventDB = new HashMap<DatabaseQuery, Event>();
+  private Map<DatabaseQuery, Event> eventDB = new HashMap<DatabaseQuery, Event>();
   private LinkedHashSet<CommutativePair> races = new LinkedHashSet<CommutativePair>();
 
   public void checkRace(Integer iid, Integer thread, Long memory, boolean isWrite, VectorClock vClock, LockSet ls) {
@@ -123,8 +127,8 @@ class HybridRaceTracker {
       if (thisEvent.isRace(otherEvent)) {
         races.add(new CommutativePair(thisEvent.iid, otherEvent.iid));
       }
-    }*/
-    
+    }// */
+    //*
     LinkedList<Event> eventStack = eventsAtMem.get(memory);
     if (eventStack == null) {
       eventStack = new LinkedList<Event>();
@@ -132,22 +136,24 @@ class HybridRaceTracker {
     }
     for (Event e : eventStack) {
       if ( thisEvent.isRace(e) ) {
-        races.add(new CommutativePair(thisEvent.iid, e.iid));
+        CommutativePair thisRace = new CommutativePair(thisEvent.iid, e.iid);
+        races.add(thisRace);
+        System.out.println("Potential race between " + thisRace);
       }
     }
-    
+    // */
   }
 
   public void addEvent(Integer iid, Integer thread, Long memory, boolean isWrite, VectorClock vClock, LockSet ls) {
     Event e = new Event(iid, thread, memory, isWrite, vClock, ls);
     /*
-    System.out.println("Adding event to db: " + e);
+    //System.out.println("Adding event to db: " + e);
     eventDB.put(new DatabaseQuery(memory, thread, false), e);
     if (isWrite) {
       eventDB.put(new DatabaseQuery(memory, thread, isWrite), e);
     }
     // */
-    
+    //*
     LinkedList<Event> eventStack = eventsAtMem.get(memory);
     if (eventStack == null) {
       eventStack = new LinkedList<Event>();

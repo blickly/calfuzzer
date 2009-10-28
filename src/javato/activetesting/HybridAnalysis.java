@@ -102,6 +102,10 @@ public class HybridAnalysis extends AnalysisImpl {
         synchronized (ActiveChecker.lock) {
 //    Your code goes here.
 //    In my implementation I had the following code:
+            System.out.println("startBefore: " +
+                "thread" + parent + " forks thread" + child + " @" +
+                javato.activetesting.analysis.Observer.getIidToLine(iid)
+                + "[" + iid + "]");
             vcTracker.startBefore(parent, child);
         }
     }
@@ -110,6 +114,10 @@ public class HybridAnalysis extends AnalysisImpl {
         synchronized (ActiveChecker.lock) {
 //    Your code goes here.
 //    In my implementation I had the following code:
+            System.out.println("waitAfter: " +
+                "thread" + thread + "@" +
+                javato.activetesting.analysis.Observer.getIidToLine(iid)
+                + "[" + iid + "]");
             vcTracker.waitAfter(thread, lock);
         }
     }
@@ -118,6 +126,10 @@ public class HybridAnalysis extends AnalysisImpl {
         synchronized (ActiveChecker.lock) {
 //    Your code goes here.
 //    In my implementation I had the following code:
+            System.out.println("notifyBefore: " +
+                "thread" + thread + "@" +
+                javato.activetesting.analysis.Observer.getIidToLine(iid)
+                + "[" + iid + "]");
             vcTracker.notifyBefore(thread, lock);
         }
     }
@@ -126,12 +138,20 @@ public class HybridAnalysis extends AnalysisImpl {
         synchronized (ActiveChecker.lock) {
 //    Your code goes here.
 //    In my implementation I had the following code:
+            System.out.println("notifyAllBefore: " +
+                "thread" + thread + "@" +
+                javato.activetesting.analysis.Observer.getIidToLine(iid)
+                + "[" + iid + "]");
             vcTracker.notifyBefore(thread, lock);
         }
     }
 
     public void joinAfter(Integer iid, Integer parent, Integer child) {
         synchronized (ActiveChecker.lock) {
+            System.out.println("joinAfter: " +
+                "thread" + parent + " joins thread" + child + " @" +
+                javato.activetesting.analysis.Observer.getIidToLine(iid)
+                + "[" + iid + "]");
 //    Your code goes here.
 //    In my implementation I had the following code:
             vcTracker.joinAfter(parent, child);

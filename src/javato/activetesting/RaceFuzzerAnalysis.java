@@ -133,7 +133,6 @@ class RaceChecker extends ActiveChecker {
       this.iid = iid;
     }
     public void check(Collection<ActiveChecker> checkers) {
-      //System.out.println("Found " + checkers.size() + " checkers");
       for (ActiveChecker ac : checkers) {
         if (ac instanceof RaceChecker) {
           RaceChecker rc = (RaceChecker) ac;

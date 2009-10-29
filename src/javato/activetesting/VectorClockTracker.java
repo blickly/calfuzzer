@@ -82,18 +82,6 @@ class VectorClockTracker {
 
   public void notifyBefore(Integer thread, Integer lock) {
     VectorClock lc = lockClocks.get(lock);
-    lockClocks.remove(lock);
-    if (lc != null) {
-      VectorClock clock = threadClocks.get(thread);
-      if (clock == null) clock = new VectorClock(thread);
-
-      clock.maximumUpdate(lc);
-      clock.increment(thread);
-      threadClocks.put(thread, clock);
-    }
-  }
-  public void waitAfter(Integer thread, Integer lock) {
-    VectorClock lc = lockClocks.get(lock);
     VectorClock clock = threadClocks.get(thread);
     if (clock == null) clock = new VectorClock(thread);
     if (lc != null) {
@@ -103,6 +91,18 @@ class VectorClockTracker {
     }
     clock.increment(thread);
     lockClocks.put(lock, lc);
+  }
+  public void waitAfter(Integer thread, Integer lock) {
+    VectorClock lc = lockClocks.get(lock);
+    lockClocks.remove(lock);
+    if (lc != null) {
+      VectorClock clock = threadClocks.get(thread);
+      if (clock == null) clock = new VectorClock(thread);
+
+      clock.maximumUpdate(lc);
+      clock.increment(thread);
+      threadClocks.put(thread, clock);
+    }
   }
 
   public VectorClock getVectorClock(Integer thread) {

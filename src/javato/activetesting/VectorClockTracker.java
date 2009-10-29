@@ -48,6 +48,15 @@ class VectorClock {
     }
     return s + "]";
   }
+
+  public VectorClock clone() {
+    VectorClock newVC = new VectorClock(0);
+    newVC.vc.remove(0);
+    for (Integer i : this.vc.keySet()) {
+      newVC.vc.put(i, this.vc.get(i));
+    }
+    return newVC;
+  }
 }
 
 class VectorClockTracker {
@@ -65,37 +74,52 @@ class VectorClockTracker {
   public void startBefore(Integer parent, Integer child) {
     VectorClock parClock = getThread(parent);
     VectorClock childClock = getThread(child);
+    System.out.println("In startBefore, original clocks. Parent: " + parClock
+        + " Child: " + childClock);
 
+    parClock.increment(parent);
     childClock.maximumUpdate(parClock);
     childClock.increment(child);
     parClock.increment(parent);
+    System.out.println("Final clocks. Parent: " + parClock
+        + " Child: " + childClock);
   }
   public void joinAfter(Integer parent, Integer child) {
     VectorClock parClock = getThread(parent);
     VectorClock childClock = getThread(child);
+    System.out.println("In joinAfter, original clocks. Parent: " + parClock
+        + " Child: " + childClock);
 
+    childClock.increment(child);
+    parClock.increment(parent);
     parClock.maximumUpdate(childClock);
     parClock.increment(parent);
+    System.out.println("Final clocks. Parent: " + parClock
+        + " Child: " + childClock);
   }
 
   public void notifyBefore(Integer thread, Integer lock) {
     VectorClock lc = lockClocks.get(lock);
-    VectorClock clock = getThread(thread);
-    if (lc != null) {
-      lc.maximumUpdate(clock);
-    } else {
-      lc = clock;
+    if (lc == null) {
+      lc = new VectorClock(thread);
+      lockClocks.put(lock, lc);
     }
+    VectorClock clock = getThread(thread);
+    System.out.println("In notify before. initial clock: " + clock);
     clock.increment(thread);
-    lockClocks.put(lock, lc);
+    lc.maximumUpdate(clock);
+    System.out.println("lc: " + lc);
+    System.out.println("final clock: " + clock);
   }
   public void waitAfter(Integer thread, Integer lock) {
     VectorClock lc = lockClocks.get(lock);
-    lockClocks.remove(lock);
+    VectorClock clock = getThread(thread);
+    System.out.println("In wait after.  Inital clock: " + clock);
+    System.out.println("lc clock: " + lc);
+    clock.increment(thread);
     if (lc != null) {
-      VectorClock clock = getThread(thread);
       clock.maximumUpdate(lc);
-      clock.increment(thread);
+      System.out.println("final clock: " + clock);
     }
   }
 

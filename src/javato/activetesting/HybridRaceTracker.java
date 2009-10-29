@@ -47,12 +47,12 @@ class Event {
   public LockSet ls;
 
   Event(Integer iid, Integer thread, Long memory, boolean isWrite, VectorClock vClock, LockSet ls) {
-    this.iid = iid;
-    this.thread = thread;
-    this.memory = memory;
+    this.iid = new Integer(iid);
+    this.thread = new Integer(thread);
+    this.memory = new Long(memory);
     this.isWrite = isWrite;
-    this.vClock = vClock;
-    this.ls = ls;
+    this.vClock = vClock.clone();
+    this.ls = new LockSet(ls);
   }
 
   boolean isRace(Event rhs) {
@@ -90,45 +90,52 @@ class Event {
 class DatabaseQuery {
   Long memory;
   Integer thread;
-  Boolean needWrite;
+  //Boolean needWrite;
 
   DatabaseQuery(Long mem, Integer t, Boolean wr) {
     this.memory = mem;
     this.thread = t;
-    this.needWrite = wr;
+    //this.needWrite = wr;
   }
 
   public int hashCode() {
     return this.memory.hashCode() + this.thread.hashCode()
-      + this.needWrite.hashCode();
+      //+ this.needWrite.hashCode()
+      ;
   }
 
   public boolean equals(Object o) {
     DatabaseQuery rhs = (DatabaseQuery) o;
     return this.memory.equals(rhs.memory) && this.thread.equals(rhs.thread)
-      && this.needWrite.equals(rhs.needWrite);
+      //&& this.needWrite.equals(rhs.needWrite)
+      ;
   }
 }
 
 class HybridRaceTracker {
   private Map<Long, LinkedList<Event>> eventsAtMem = new HashMap<Long, LinkedList<Event>>();
-  private Map<DatabaseQuery, Event> eventDB = new HashMap<DatabaseQuery, Event>();
+  private Map<Long, Map<Integer, LinkedList<Event>>> eventDB = new HashMap<Long, Map<Integer, LinkedList<Event>>>();
   private LinkedHashSet<CommutativePair> races = new LinkedHashSet<CommutativePair>();
 
   public void checkRace(Integer iid, Integer thread, Long memory, boolean isWrite, VectorClock vClock, LockSet ls) {
     Event thisEvent = new Event(iid, thread, memory, isWrite, vClock, ls);
-    /*
-    for (int t = 0; t < 100; ++t) {
-      if (thread.equals(t))
-        continue;
-      Event otherEvent = eventDB.get(new DatabaseQuery(memory, t, !isWrite));
-      if (otherEvent == null)
-        continue;
-      if (thisEvent.isRace(otherEvent)) {
-        races.add(new CommutativePair(thisEvent.iid, otherEvent.iid));
-      }
-    }// */
     //*
+    Map<Integer, LinkedList<Event>> eventsForThread = eventDB.get(memory);
+    if (eventsForThread == null) return;
+    for (Integer otherThread : eventsForThread.keySet()) {
+      if (otherThread.equals(thread)) continue;
+      LinkedList<Event> eventList = eventsForThread.get(otherThread);
+      for (Event e : eventList) {
+        if (e.vClock.lessThanEqual(vClock)) break;
+        else if (thisEvent.isRace(e)) {
+          CommutativePair thisRace = new CommutativePair(thisEvent.iid, e.iid);
+          races.add(thisRace);
+          System.out.println("Potential race between " + thisRace);
+        }
+      }
+    }
+    // */
+    /*
     LinkedList<Event> eventStack = eventsAtMem.get(memory);
     if (eventStack == null) {
       eventStack = new LinkedList<Event>();
@@ -146,14 +153,21 @@ class HybridRaceTracker {
 
   public void addEvent(Integer iid, Integer thread, Long memory, boolean isWrite, VectorClock vClock, LockSet ls) {
     Event e = new Event(iid, thread, memory, isWrite, vClock, ls);
-    /*
-    //System.out.println("Adding event to db: " + e);
-    eventDB.put(new DatabaseQuery(memory, thread, false), e);
-    if (isWrite) {
-      eventDB.put(new DatabaseQuery(memory, thread, isWrite), e);
-    }
-    // */
     //*
+    //System.out.println("Adding event to db: " + e);
+    Map<Integer, LinkedList<Event>> eventsForThread = eventDB.get(memory);
+    if (eventsForThread == null) {
+      eventsForThread = new HashMap<Integer, LinkedList<Event>>();
+      eventDB.put(memory, eventsForThread);
+    }
+    LinkedList<Event> eventList = eventsForThread.get(thread);
+    if (eventList == null) {
+      eventList = new LinkedList<Event>();
+      eventsForThread.put(thread, eventList);
+    }
+    eventList.addFirst(e);
+    // */
+    /*
     LinkedList<Event> eventStack = eventsAtMem.get(memory);
     if (eventStack == null) {
       eventStack = new LinkedList<Event>();

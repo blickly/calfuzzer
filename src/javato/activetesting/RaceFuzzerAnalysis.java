@@ -3,6 +3,7 @@ package javato.activetesting;
 import javato.activetesting.analysis.CheckerAnalysisImpl;
 import javato.activetesting.common.Parameters;
 
+import java.util.Set;
 import java.util.LinkedHashSet;
 import java.util.Collection;
 
@@ -137,9 +138,8 @@ class RaceChecker extends ActiveChecker {
         if (ac instanceof RaceChecker) {
           RaceChecker rc = (RaceChecker) ac;
           if (this.isRace(rc)) {
-            System.out.println("Found real race between "
-                + Observer.getIidToLine(this.iid) + "[" + this.iid + "] and "
-                + Observer.getIidToLine(rc.iid) + "[" + rc.iid + "]");
+            CommutativePair thisRace = new CommutativePair(this.iid, rc.iid);
+            System.out.println("Found real race between " + thisRace);
             if (this.rand.nextBoolean()) {
               this.block(0);
               rc.unblock(0);
